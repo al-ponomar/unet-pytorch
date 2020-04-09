@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-
+import torch.optim as optim
 
 class Unet(nn.Module):
 
@@ -32,6 +32,9 @@ class Unet(nn.Module):
         return num_features
 
 net = Unet()
+optimizer = optim.SGD(net.parameters(), lr=0.001)
+optimizer.zero_grad()
+
 print(net)
 
 params = list(net.parameters())
@@ -41,6 +44,17 @@ print(params[0].size())
 input = torch.randn(1, 32, 32)
 input = input.unsqueeze(0)
 out = net(input)
-print(out)
+target = torch.randn(10)
+print(target.size())
+target = target.view(1, -1)
+print(target.size())
+
+criterion = nn.MSELoss()
+loss = criterion(out, target)
+
+
 net.zero_grad()
-out.backward(torch.randn(1, 10))
+print(net.conv1.bias.grad)
+loss.backward()
+print(net.conv1.bias.grad)
+optimizer.step()
