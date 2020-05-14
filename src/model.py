@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 class UNet(nn.module):
 
@@ -8,45 +9,63 @@ class UNet(nn.module):
             nn.Conv2d(in_dim, out_dim, 3),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_dim, 3, 3),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2, 2)
+            nn.ReLU(inplace=True)
         )
-    def up_block(self, in_dim, out_dim):
+
+    def up_block(self, dim):
         return nn.Sequential(
-            nn.ConvTranspose2d(in_dim, out_dim, 2),
-            nn.Conv2d(out_dim, out_dim, 3),
+            nn.Conv2d(dim, dim, 3),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_dim, out_dim, 3),
+            nn.Conv2d(dim, dim, 3),
             nn.ReLU(inplace=True)
         )
 
     def __init__(self):
         super(UNet, self).__init__()
         self.down1 = self.down_block(3, 32)
+        self.pool1 = nn.MaxPool2d(2, 2)
         self.down2 = self.down_block(32, 64)
+        self.pool2 = nn.MaxPool2d(2, 2)
         self.down3 = self.down_block(64, 128)
+        self.pool3 = nn.MaxPool2d(2, 2)
         self.down4 = self.down_block(128, 256)
+        self.pool4 = nn.MaxPool2d(2, 2)
+
         self.bottleneck = nn.Sequential(
             nn.Conv2d(256, 512, 3),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, 3),
             nn.ReLU(inplace=True)
         )
-        self.up1 = self.up_block(512, 256)
-        self.up2 = self.up_block(256, 128)
-        self.up3 = self.up_block(128, 64)
-        self.up3 = self.up_block(64, 32)
+        self.upconv1 = nn.ConvTranspose2d(512, 256, 2),
+        self.up1 = self.up_block(256)
+        self.upconv2 = nn.ConvTranspose2d(256, 128, 2),
+        self.up2 = self.up_block(128)
+        self.upconv3 = nn.ConvTranspose2d(128, 64, 2),
+        self.up3 = self.up_block(64)
+        self.upconv4 = nn.ConvTranspose2d(64, 32, 2),
+        self.up3 = self.up_block(32)
 
         self.output = nn.Sequential(
             nn.Conv2d(32, 1, 1),
             nn.Sigmoid(),
         )
 
+    def forward(self, x):
+        down1 = self.down1(x)
+        down2 = self.down2(self.pool1(down1))
+        down3 = self.down3(self.pool2(down2))
+        down4 = self.down4(self.pool3(down3))
 
-    # def forward(self, x):
+        bottleneck = self.bottleneck(self.pool4(down4))
 
+        up1 = self.up1(torch.cat((down4, self.upconv1(bottleneck)), dim=1))
+        up2 = self.up2(torch.cat((down3, self.upconv2(up1)), dim=1))
+        up3 = self.up3(torch.cat((down2, self.upconv3(up2)), dim=1))
+        up4 = self.up4(torch.cat((down1, self.upconv4(up3)), dim=1))
 
-
+        out = self.output(up4)
+        return out
 
 class Net(nn.Module):
 
