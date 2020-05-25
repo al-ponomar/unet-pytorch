@@ -2,13 +2,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-class UNet(nn.module):
+class UNet(nn.Module):
 
     def down_block(self, in_dim, out_dim):
         return nn.Sequential(
-            nn.Conv2d(in_dim, out_dim, 3),
+            nn.Conv2d(in_dim, out_dim, 3, padding=2),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_dim, 3, 3),
+            nn.Conv2d(out_dim, out_dim, 3),
             nn.ReLU(inplace=True)
         )
 
@@ -52,12 +52,18 @@ class UNet(nn.module):
         )
 
     def forward(self, x):
-        down1 = self.down1(x)
-        down2 = self.down2(self.pool1(down1))
-        down3 = self.down3(self.pool2(down2))
-        down4 = self.down4(self.pool3(down3))
+        x = x.float()
+        down1 = self.pool1(self.down1(x))
+        down2 = self.pool2(self.down2(down1))
+        down3 = self.pool3(self.down3(down2))
+        down4 = self.pool4(self.down4(down3))
 
-        bottleneck = self.bottleneck(self.pool4(down4))
+        bottleneck = self.bottleneck(down4)
+        # print(bottleneck.size())
+        print(down1.size())
+        print(down2.size())
+        print(down3.size())
+        print(down4.size())
 
         up1 = self.up1(torch.cat((down4, self.upconv1(bottleneck)), dim=1))
         up2 = self.up2(torch.cat((down3, self.upconv2(up1)), dim=1))

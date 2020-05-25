@@ -6,49 +6,68 @@ import torchvision.transforms as standard_transforms
 
 import matplotlib.pyplot as plt
 import numpy as np
-# from src.model import UNet
+from src.model import UNet
 import torch.optim as optim
 
-def imshow(img):
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
+net = UNet()
+test_batch = np.ones((1, 3, 256, 256))
+test_gt = np.ones((1, 1, 256, 256))
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer.zero_grad()
+images = torch.from_numpy(test_batch)
+outputs = net(images)
+print(outputs.size())
+# torch.Size([1, 3, 280, 280]) torch.Size([1, 1, 280, 280])
 
-mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
-input_transform = standard_transforms.Compose([
-    standard_transforms.CenterCrop(280),
-    standard_transforms.ToTensor()
-])
-target_transform = standard_transforms.Compose([
-    standard_transforms.CenterCrop(280),
-    standard_transforms.ToTensor()
-])
+
+# def imshow(img, gt=False):
+#     npimg = img.numpy()
+#     if not gt:
+#         plt.imshow(np.transpose(npimg, (1, 2, 0)))
+#     else:
+#         plt.imshow(npimg[0, :, :])
+#
+#     plt.show()
+#
+# mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+
+# input_transform = standard_transforms.Compose([
+#     standard_transforms.CenterCrop(280),
+#     standard_transforms.ToTensor()
+# ])
+# target_transform = standard_transforms.Compose([
+#     standard_transforms.CenterCrop(280),
+#     standard_transforms.ToTensor()
+# ])
 # trainset = torchvision.datasets.VOCSegmentation(root='/Users/stranger/PycharmProjects/unet-pytorch/voc_data', year='2012', image_set='train',
-#                                          download=True, transform=input_transform)
+#                                          download=True, transform=input_transform,  target_transform=target_transform)
 # trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
 #
 # print('training data loading finished')
 
-testset = torchvision.datasets.VOCSegmentation(root='/Users/stranger/PycharmProjects/unet-pytorch/voc_data', year='2012', image_set='trainval',
-                                     download=True, transform=input_transform, target_transform=target_transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False, num_workers=2)
+# testset = torchvision.datasets.VOCSegmentation(root='/Users/stranger/PycharmProjects/unet-pytorch/voc_data', year='2012', image_set='trainval',
+#                                      download=True, transform=input_transform, target_transform=target_transform)
+# testloader = torch.utils.data.DataLoader(testset, batch_size=1, shuffle=False, num_workers=2)
 
-print(len(testloader))
-
-print('validation data loading finished')
+# print(len(testloader))
+#
+# print('validation data loading finished')
 
 # classes = ('plane', 'car', 'bird', 'cat',
 #            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-for vi, data in enumerate(testloader, 0):
-    inputs, gts = data
-    imshow(inputs[0])
-    imshow(gts[0])
-    break
+# for vi, data in enumerate(testloader, 0):
+#     inputs, gts = data
+#     imshow(inputs[0], gt=False)
+#     imshow(gts[0], gt=True)
+#     break
 
 # dataiter = iter(testloader)
 # images, labels = dataiter.next()
+# print(images.size(), labels.size())
+# print(images.numpy().shape, labels.numpy().shape)
 # imshow(images[0])
 
 # net = UNet()
