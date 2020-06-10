@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+
 class UNet(nn.Module):
 
     def down_block(self, in_dim, out_dim):
@@ -12,11 +13,11 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-    def up_block(self, dim):
+    def up_block(self, in_dim, out_dim):
         return nn.Sequential(
-            nn.Conv2d(dim, dim, 3),
+            nn.Conv2d(in_dim, out_dim, 3, padding=2),
             nn.ReLU(inplace=True),
-            nn.Conv2d(dim, dim, 3),
+            nn.Conv2d(out_dim, out_dim, 3),
             nn.ReLU(inplace=True)
         )
 
@@ -32,19 +33,19 @@ class UNet(nn.Module):
         self.pool4 = nn.MaxPool2d(2, 2)
 
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(256, 512, 3),
+            nn.Conv2d(256, 512, 3, padding=2),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 512, 3),
             nn.ReLU(inplace=True)
         )
-        self.upconv1 = nn.ConvTranspose2d(512, 256, 2),
-        self.up1 = self.up_block(256)
-        self.upconv2 = nn.ConvTranspose2d(256, 128, 2),
-        self.up2 = self.up_block(128)
-        self.upconv3 = nn.ConvTranspose2d(128, 64, 2),
-        self.up3 = self.up_block(64)
-        self.upconv4 = nn.ConvTranspose2d(64, 32, 2),
-        self.up3 = self.up_block(32)
+        self.upconv4 = nn.ConvTranspose2d(512, 256, 2, stride=2)
+        self.up4 = self.up_block(512, 256)
+        self.upconv3 = nn.ConvTranspose2d(256, 128, 2, stride=2)
+        self.up3 = self.up_block(256, 128)
+        self.upconv2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        self.up2 = self.up_block(128, 64)
+        self.upconv1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
+        self.up1 = self.up_block(64, 32)
 
         self.output = nn.Sequential(
             nn.Conv2d(32, 1, 1),
@@ -53,25 +54,33 @@ class UNet(nn.Module):
 
     def forward(self, x):
         x = x.float()
-        down1 = self.pool1(self.down1(x))
-        down2 = self.pool2(self.down2(down1))
-        down3 = self.pool3(self.down3(down2))
-        down4 = self.pool4(self.down4(down3))
 
-        bottleneck = self.bottleneck(down4)
-        # print(bottleneck.size())
-        print(down1.size())
-        print(down2.size())
-        print(down3.size())
-        print(down4.size())
+        down1 = self.down1(x)
+        down2 = self.down2(self.pool1(down1))
+        down3 = self.down3(self.pool2(down2))
+        down4 = self.down4(self.pool3(down3))
 
-        up1 = self.up1(torch.cat((down4, self.upconv1(bottleneck)), dim=1))
-        up2 = self.up2(torch.cat((down3, self.upconv2(up1)), dim=1))
-        up3 = self.up3(torch.cat((down2, self.upconv3(up2)), dim=1))
-        up4 = self.up4(torch.cat((down1, self.upconv4(up3)), dim=1))
+        bottleneck = self.bottleneck(self.pool4(down4))
 
-        out = self.output(up4)
+        up4 = self.upconv4(bottleneck)
+        up4 = torch.cat((down4, up4), dim=1)
+        up4 = self.up4(up4)
+
+        up3 = self.upconv3(up4)
+        up3 = torch.cat((down3, up3), dim=1)
+        up3 = self.up3(up3)
+
+        up2 = self.upconv2(up3)
+        up2 = torch.cat((down2, up2), dim=1)
+        up2 = self.up2(up2)
+
+        up1 = self.upconv1(up2)
+        up1 = torch.cat((down1, up1), dim=1)
+        up1 = self.up1(up1)
+
+        out = self.output(up1)
         return out
+
 
 class Net(nn.Module):
 
