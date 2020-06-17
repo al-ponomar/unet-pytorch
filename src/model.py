@@ -5,7 +5,7 @@ import torch
 
 class UNet(nn.Module):
 
-    def down_block(self, in_dim, out_dim):
+    def _block(self, in_dim, out_dim):
         return nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, padding=2),
             nn.ReLU(inplace=True),
@@ -13,23 +13,16 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-    def up_block(self, in_dim, out_dim):
-        return nn.Sequential(
-            nn.Conv2d(in_dim, out_dim, 3, padding=2),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_dim, out_dim, 3),
-            nn.ReLU(inplace=True)
-        )
 
     def __init__(self):
         super(UNet, self).__init__()
-        self.down1 = self.down_block(3, 32)
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.down2 = self.down_block(32, 64)
-        self.pool2 = nn.MaxPool2d(2, 2)
-        self.down3 = self.down_block(64, 128)
-        self.pool3 = nn.MaxPool2d(2, 2)
-        self.down4 = self.down_block(128, 256)
+        self.down1 = self._block(3, 32)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.down2 = self._block(32, 64)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.down3 = self._block(64, 128)
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.down4 = self._block(128, 256)
         self.pool4 = nn.MaxPool2d(2, 2)
 
         self.bottleneck = nn.Sequential(
@@ -39,13 +32,13 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True)
         )
         self.upconv4 = nn.ConvTranspose2d(512, 256, 2, stride=2)
-        self.up4 = self.up_block(512, 256)
+        self.up4 = self._block(512, 256)
         self.upconv3 = nn.ConvTranspose2d(256, 128, 2, stride=2)
-        self.up3 = self.up_block(256, 128)
+        self.up3 = self._block(256, 128)
         self.upconv2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.up2 = self.up_block(128, 64)
+        self.up2 = self._block(128, 64)
         self.upconv1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
-        self.up1 = self.up_block(64, 32)
+        self.up1 = self._block(64, 32)
 
         self.output = nn.Sequential(
             nn.Conv2d(32, 1, 1),
