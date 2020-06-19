@@ -44,7 +44,7 @@ target_transform = standard_transforms.Compose([
     standard_transforms.CenterCrop(256),
     standard_transforms.ToTensor()
 ])
-trainset = torchvision.datasets.VOCSegmentation(root='/home/elena/PycharmProjects/unet-pytorch/voc_data', year='2012',
+trainset = torchvision.datasets.VOCSegmentation(root='/home/elena/PycharmProjects/unet-pytorch/voc_data', year='2008',
                                                 image_set='train',
                                                 download=True, transform=input_transform,
                                                 target_transform=target_transform)
@@ -69,12 +69,17 @@ for epoch in range(100):
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         images, labels = data
-        # imshow(images[0])
-        # imshow(labels[0])
+        labels = labels.data
+        labels[labels!=0] = 1.0
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = net(images)
         loss = criterion(outputs, labels)
+        if i < 1:
+            output = outputs.to('cpu')[0].data
+            label = labels.to('cpu')[0].data
+            imshow(output)
+            imshow(label)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()

@@ -8,8 +8,10 @@ class UNet(nn.Module):
     def _block(self, in_dim, out_dim):
         return nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, padding=2),
+            nn.BatchNorm2d(num_features=out_dim),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_dim, out_dim, 3),
+            nn.BatchNorm2d(num_features=out_dim),
             nn.ReLU(inplace=True)
         )
 
