@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as standard_transforms
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from src.model import UNet
 import torch.optim as optim
-
+import wandb
+wandb.init(project="test")
 
 def imshow(img):
     npimg = img.numpy()
@@ -56,6 +57,9 @@ net = UNet()
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.0001)
 net.to(device)
+
+wandb.watch(net)
+
 for epoch in range(100):
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -69,10 +73,13 @@ for epoch in range(100):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
+        # wandb.log({"training loss:", loss.item()})
+        wandb.log({"Batch Loss": loss.item()})
 
     print('%d loss %.3f' % (epoch + 1, running_loss / len(trainloader)))
+    wandb.log({"Total Loss": running_loss / len(trainloader), "Epoch": epoch+1})
 
 print('Finished training')
 
-path_to_model = '/home/elena/PycharmProjects/unet-pytorch/models/unet.pt'
-torch.save(net.state_dict(), path_to_model)
+# path_to_model = '/home/elena/PycharmProjects/unet-pytorch/models/unet2.pt'
+torch.save(net.state_dict(), os.path.join(wandb.run.dir, 'unet_wb.pt'))
