@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torchvision
-import torchvision.transforms as transforms
 import torchvision.transforms as standard_transforms
 
 import matplotlib.pyplot as plt
@@ -27,14 +26,6 @@ def imshow(img):
 USE_CUDA = torch.cuda.is_available()
 device = torch.device("cuda:0" if USE_CUDA else "cpu")
 
-# net = UNet()
-# test_batch = np.ones((5, 3, 256, 256))
-# test_gt = np.ones((5, 1, 256, 256))
-# criterion = nn.BCEWithLogitsLoss()
-# optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-# optimizer.zero_grad()
-# images = torch.from_numpy(test_batch)
-# outputs = net(images)
 
 input_transform = standard_transforms.Compose([
     standard_transforms.CenterCrop(256),
@@ -75,11 +66,6 @@ for epoch in range(100):
         optimizer.zero_grad()
         outputs = net(images)
         loss = criterion(outputs, labels)
-        if i < 1:
-            output = outputs.to('cpu')[0].data
-            label = labels.to('cpu')[0].data
-            imshow(output)
-            imshow(label)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -87,6 +73,6 @@ for epoch in range(100):
     print('%d loss %.3f' % (epoch + 1, running_loss / len(trainloader)))
 
 print('Finished training')
-#
-# path_to_model = '/home/elena/PycharmProjects/unet-pytorch/models/unet.pt'
-# torch.save(net.state_dict(), path_to_model)
+
+path_to_model = '/home/elena/PycharmProjects/unet-pytorch/models/unet.pt'
+torch.save(net.state_dict(), path_to_model)
