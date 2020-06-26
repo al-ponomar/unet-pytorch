@@ -1,0 +1,12 @@
+program: training_unet.py
+method: grid
+metric:
+  name: total_loss
+  goal: minimize
+parameters:
+  learning_rate:
+    values: [0.001, 0.01, 0.01]
+  epochs:
+    values: [10, 5]
+  optimizer:
+    values: ["adam", "sgd"]
