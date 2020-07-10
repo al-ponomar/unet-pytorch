@@ -1,4 +1,4 @@
-program: training_unet.py
+program: training.py
 method: grid
 metric:
   name: total_loss

@@ -1,4 +1,7 @@
 import torch
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 def get_accuracy(testloader, net, device):
     right_pixels = 0
@@ -27,7 +30,18 @@ def get_accuracy(testloader, net, device):
         return right_pixels / count
 
 
-
+def imshow(img):
+    npimg = img.numpy()
+    npimg = np.transpose(npimg, (1, 2, 0))
+    if npimg.shape[2] == 1:
+        npimg = npimg[:, :, 0]
+        zers = np.zeros((256, 256, 3))
+        zers[:, :, 0] = npimg
+        zers[:, :, 1] = npimg
+        zers[:, :, 2] = npimg
+        npimg = zers
+    plt.imshow(npimg)
+    plt.show()
 
 #
 # net = UNet()

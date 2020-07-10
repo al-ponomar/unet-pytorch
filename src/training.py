@@ -1,51 +1,70 @@
 import torch
 import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-import numpy as np
-from src.model import Net
-import torch.optim as optim
+import os
+from src.model import UNet
+from src.evaluation import get_accuracy, imshow
+from src.dataloader import load_voc_data
+import wandb
 
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-trainset = torchvision.datasets.CIFAR10(root='/Users/stranger/PycharmProjects/unet-pytorch/data', train=True,
-                                        download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
+USE_CUDA = torch.cuda.is_available()
+device = torch.device("cuda:0" if USE_CUDA else "cpu")
 
-testset = torchvision.datasets.CIFAR10(root='/Users/stranger/PycharmProjects/unet-pytorch/data', train=False,
-                                     download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
-
-classes = ('plane', 'car', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+hyperparameter_defaults = dict(
+    learning_rate=0.001,
+    epochs=5,
+    optimizer='adam'
+)
 
 
+def train():
+    trainloader, testloader = load_voc_data(root='/home/elena/PycharmProjects/unet-pytorch/voc_data',
+                                            year='2008')
 
 
-net = Net()
+    wandb.init(project="test",
+               config=hyperparameter_defaults)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-print('Started training')
-for epoch in range(2):
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        images, labels = data
+    net = UNet()
 
-        optimizer.zero_grad()
-        outputs = net(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    criterion = nn.BCEWithLogitsLoss()
+    if wandb.config.optimizer == 'adam':
+        optimizer = torch.optim.Adam(net.parameters(), lr=wandb.config.learning_rate)
+    else:
+        optimizer = torch.optim.SGD(net.parameters(), lr=wandb.config.learning_rate)
+    net.to(device)
 
-        running_loss += loss.item()
-        if i % 200 == 199:
-            print('[%d, %d] loss %.3f' % (epoch + 1, i + 1, running_loss / 200))
-            running_loss = 0
-print('Finished training')
+    wandb.watch(net)
 
-path_to_model = '/Users/stranger/PycharmProjects/unet-pytorch/models/' + 'test2.pt'
-torch.save(net.state_dict(), path_to_model)
+    for epoch in range(wandb.config.epochs):
+        running_loss = 0.0
+        for i, data in enumerate(trainloader):
+            images, labels = data
+            labels = labels.data
+            labels[labels != 0] = 1.0
+            images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = net(images)
+            if i == 0:
+                wandb.log({"masked_examples": [wandb.Image(j) for j in images]})
+                wandb.log({"labels": [wandb.Image(j) for j in labels]})
+                wandb.log({"predictions": [wandb.Image(j) for j in outputs]})
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+        if epoch % 1 == 0:
+            accuracy = get_accuracy(testloader, net, device)
+            wandb.log({"Accuracy": accuracy})
+            print("Accuracy:", accuracy)
+
+        print('%d loss %.3f' % (epoch + 1, running_loss / len(trainloader)))
+        wandb.log({"total_loss": running_loss / len(trainloader), "Epoch": epoch + 1})
+
+    print('Finished training')
+
+    torch.save(net.state_dict(), os.path.join(wandb.run.dir, 'unet_wb.pt'))
 
 
-
+if __name__ == "__main__":
+    train()
